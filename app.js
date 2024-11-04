@@ -1,7 +1,13 @@
 const darkModeToggle = document.getElementById("darkModeToggle");
 const body = document.body;
-document.getElementById('footerText').innterHTML = `Copyright &copy;${new Date().getFullYear()} &nbsp; Hardik Desai`
-// Function to toggle dark mode based on user preference
+const newsBox = document.getElementById("newsBox");
+const spinner = document.getElementById("spinner");
+
+let allNews = [];
+let currentNewsIndex = 0;
+const newsLimit = 40;
+
+// Toggle Dark Mode
 function toggleDarkMode() {
   if (darkModeToggle.checked) {
     body.classList.add("dark-mode");
@@ -9,94 +15,96 @@ function toggleDarkMode() {
     body.classList.remove("dark-mode");
   }
 }
-
-// Event listener for dark mode toggle button
 darkModeToggle.addEventListener("change", toggleDarkMode);
 
-// Function to check and set initial dark mode state based on user preferences
+// Initial Dark Mode
 function setInitialDarkMode() {
   const prefersDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
   if (prefersDarkMode) {
     body.classList.add("dark-mode");
     darkModeToggle.checked = true;
   }
 }
+setInitialDarkMode();
 
-// Call the function to set initial dark mode state
-//setInitialDarkMode();
+// Fetch News Function with parameters
+function getNews({ category = '', language = 'en', country = 'in'} = {}) {
+  const url = new URL('http://localhost:3000/api/news');
+  if (category) url.searchParams.append('category', category);
+  // if (q) url.searchParams.append('q', q);
+  url.searchParams.append('language', language);
+  url.searchParams.append('country', country);
+  // url.searchParams.append('page', page);
 
-let newsBox = document.getElementById("newsBox");
-let spinner = document.getElementById("spinner");
-let newsCategory = [
-  "national",
-  "business",
-  "sports",
-  "world",
-  "politics",
-  "technology",
-  "startup",
-  "entertainment",
-  "miscellaneous",
-  "hatke",
-  "science",
-  "automobile",
-];
+  spinner.style.visibility = "visible";
+  newsBox.style.visibility = "hidden";
 
-// Create XMLHttpRequest Object
-const xhr = new XMLHttpRequest();
-
-function sendCategory(index) {
-  getNews(newsCategory[index]);
+  fetch(url)
+    .then(response => response.ok ? response.json() : Promise.reject(response))
+    .then(data => {
+      allNews = data;
+      currentNewsIndex = 0;
+      displayNews();
+      spinner.style.visibility = "hidden";
+    })
+    .catch(error => {
+      console.error('Error fetching news:', error);
+      newsBox.innerHTML = '<p>Failed to fetch news articles. Please try again later.</p>';
+      spinner.style.visibility = "hidden";
+      newsBox.style.visibility = "visible";
+    });
 }
-getNews("all");
 
-function getNews(newsCategoryName) {
-  xhr.open(
-    "GET",
-    `https://inshortsapi.vercel.app/news?category=${newsCategoryName}`,
-    true
-  );
+// Display News Cards
+function displayNews() {
+  if (allNews.length === 0) {
+    newsBox.innerHTML = '<p>No news articles available at the moment. Please try again later.</p>';
+    newsBox.style.visibility = "visible";
+    return;
+  }
 
-  xhr.getResponseHeader("Content-type", "application/json");
+  const newsHTML = allNews.slice(currentNewsIndex, currentNewsIndex + newsLimit).map(article => {
+    const hasImage = article.image_url ? "has-image" : ""; // Check if an image URL exists
+    const imageUrl = article.image_url || ''; // Use image URL if available, otherwise leave it blank
 
-  xhr.onload = function () {
-    if (this.status === 200) {
-      let json = JSON.parse(this.responseText);
-      let data = json.data;
-
-      let newsHTML = "";
-
-      function showSpinner() {
-        spinner.style.visibility = "hidden";
-        newsBox.style.visibility = "visible";
-      }
-
-      xhr.onprogress = showSpinner;
-
-      for (key in data) {
-        let news = `<div class="newsCard">
+    return `
+      <div class="newsCard ${hasImage}">
         <div class="imageWrapper">
-        <img src="${data[key].imageUrl}"
-        class="thumnail" alt="Image">
-            </div>
-            <div class="card-body">
-            <div class="card-date">${data[key].date}</div>
-                      <h5 class="card-title">${data[key].title}</h5>
-                                <h5 class="card-author">Author: ${data[key].author}</h5>
-                                <p class="card-text">${data[key].content}</p>
-                                <a target="_blank" href="${data[key].readMoreUrl}" class="btn btn-primary">Read more..</a>
-                            </div>
-                           
-                        </div>`;
-        newsHTML += news;
-      }
+          <img src="${imageUrl}" class="thumbnail" alt="News Image">
+        </div>
+        <div class="card-body">
+          <div class="card-date">${new Date(article.pubDate).toLocaleDateString()}</div>
+          <h5 class="card-title">${article.title}</h5>
+          <h5 class="card-author">Author: ${article.creator || 'Unknown'}</h5>
+          <p class="card-text">${article.description || 'No description available'}</p>
+          <a target="_blank" href="${article.link}" class="btn btn-primary">Read more..</a>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  newsBox.innerHTML = newsHTML;
+  newsBox.style.visibility = "visible";
 
-      newsBox.innerHTML = newsHTML;
-    } else {
-      console.log("Some Error Occurred");
-    }
-  };
 
-  xhr.send();
+
+  if (currentNewsIndex + newsLimit < allNews.length) {
+    newsBox.innerHTML += `<button id="showMore" class="btn btn-primary">Show More</button>`;
+    document.getElementById("showMore").addEventListener("click", showMoreNews);
+  }
+
+  newsBox.style.visibility = "visible";
 }
+
+// Fetch News by Category
+function sendCategory(id) {
+  const categories = [
+    "top", "business", "sports", "technology", "science", "entertainment",
+    "health", "politics", "world"
+  ];
+  const category = categories[id];
+  getNews({ category });
+}
+
+// Initial fetch with default parameters
+getNews();
