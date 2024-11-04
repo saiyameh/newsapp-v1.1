@@ -1,2 +1,8 @@
-# NewsApp
-NewsApp is a simple and lightweight mobile application that provides users with the latest news articles from various categories, such as Technology, Business, Sports, Health, and more. The app fetches real-time data from news APIs and presents it in a user-friendly format.
+# newsapp
+### **how to run**
+<ol>
+<li>create a <strong>.env</strong> while within the folder<br>
+<code>NEWS_API_TOKEN=your_api_key</code> (from https://newsdata.io/) <br><code>PORT=3000</code></li>
+<li>run <code>npm install</code> to download the dependencies</li>
+<li>run <code>node server.mjs</code> in terminal</li>
+<li>run <strong>index.html</strong></li></ol>
